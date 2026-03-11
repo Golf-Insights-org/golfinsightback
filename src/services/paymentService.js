@@ -4,11 +4,19 @@ import { env } from "../config/env.js";
 import { sendRegistrationConfirmationEmail } from "./emailService.js";
 
 function computeAmountCents(registration) {
-  const pkgPrice = registration.package.price;
-  if (registration.package.category === "DONATION") {
+  const pkg = registration.package;
+  if (pkg.category === "DONATION") {
     return registration.donationAmount || 0;
   }
-  return pkgPrice;
+
+  if (pkg.earlyBirdPrice != null && pkg.earlyBirdDeadline) {
+    const now = new Date();
+    if (now <= new Date(pkg.earlyBirdDeadline)) {
+      return pkg.earlyBirdPrice;
+    }
+  }
+
+  return pkg.price;
 }
 
 function getFrontendBaseUrl() {

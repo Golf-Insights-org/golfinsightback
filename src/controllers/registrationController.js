@@ -1,5 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { createRegistration, getRegistrationById } from "../services/registrationService.js";
+import { uploadSponsorLogo } from "../services/sponsorLogoService.js";
 import { prisma } from "../prisma/client.js";
 
 async function getDefaultEventId() {
@@ -36,5 +37,20 @@ export const postRegistration = asyncHandler(async (req, res) => {
 export const getRegistration = asyncHandler(async (req, res) => {
   const registration = await getRegistrationById(req.params.id);
   res.json(registration);
+});
+
+export const postSponsorLogo = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    const err = new Error("No file uploaded");
+    err.statusCode = 422;
+    throw err;
+  }
+
+  const registration = await uploadSponsorLogo({
+    registrationId: req.params.id,
+    fileBuffer: req.file.buffer,
+  });
+
+  res.json({ sponsorLogoUrl: registration.sponsorLogoUrl });
 });
 

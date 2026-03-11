@@ -51,19 +51,30 @@ model Event {
   name          String
   date          DateTime
   location      String
+  packages      Package[]
   registrations Registration[]
   createdAt     DateTime       @default(now())
 }
 
 model Package {
-  id            String          @id @default(cuid())
-  name          String          @unique
-  description   String
-  category      PackageCategory
-  price         Int
-  maxSlots      Int?
-  registrations Registration[]
-  createdAt     DateTime        @default(now())
+  id                String          @id @default(cuid())
+  eventId           String
+  name              String
+  description       String
+  category          PackageCategory
+  price             Int
+  earlyBirdPrice    Int?
+  earlyBirdDeadline DateTime?
+  maxSlots          Int?
+  exclusive         Boolean         @default(false)
+  registrations     Registration[]
+  createdAt         DateTime        @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, name])
+  @@index([eventId])
+  @@index([category])
 }
 
 model Registration {
@@ -77,8 +88,9 @@ model Registration {
   city           String
   state          String
   zip            String
-  donationAmount Int?
-  status         RegistrationStatus @default(PENDING)
+  donationAmount  Int?
+  sponsorLogoUrl  String?
+  status          RegistrationStatus @default(PENDING)
   golfers        Golfer[]
   payments       Payment[]
   createdAt      DateTime           @default(now())

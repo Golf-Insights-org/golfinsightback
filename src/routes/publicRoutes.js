@@ -1,14 +1,24 @@
 import { Router } from "express";
+import multer from "multer";
 import { body } from "express-validator";
 import { getPackages } from "../controllers/packageController.js";
 import { getEvent, getEvents } from "../controllers/eventController.js";
-import { getRegistration, postRegistration } from "../controllers/registrationController.js";
+import { getRegistration, postRegistration, postSponsorLogo } from "../controllers/registrationController.js";
 import { postCreatePayment } from "../controllers/paymentController.js";
 import { getPublicGalleryImages } from "../controllers/galleryController.js";
 import { validate } from "../middleware/validate.js";
 import { paymentRateLimiter } from "../middleware/rateLimit.js";
 
 export const publicRouter = Router();
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "application/pdf"];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
 
 publicRouter.get("/packages", getPackages);
 publicRouter.get("/events", getEvents);
@@ -36,6 +46,7 @@ publicRouter.post(
 );
 
 publicRouter.get("/registrations/:id", getRegistration);
+publicRouter.post("/registrations/:id/sponsor-logo", logoUpload.single("logo"), postSponsorLogo);
 
 publicRouter.post(
   "/payments/create",

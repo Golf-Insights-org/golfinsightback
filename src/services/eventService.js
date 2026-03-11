@@ -9,6 +9,11 @@ export async function listEvents() {
 export async function getEventWithPackagesById(id) {
   const event = await prisma.event.findUnique({
     where: { id },
+    include: {
+      packages: {
+        orderBy: [{ category: "asc" }, { price: "desc" }, { name: "asc" }],
+      },
+    },
   });
 
   if (!event) {
@@ -17,10 +22,6 @@ export async function getEventWithPackagesById(id) {
     throw err;
   }
 
-  const packages = await prisma.package.findMany({
-    orderBy: [{ category: "asc" }, { price: "asc" }, { name: "asc" }],
-  });
-
-  return { ...event, packages };
+  return event;
 }
 
