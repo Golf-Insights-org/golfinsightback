@@ -4,6 +4,7 @@ import { getPackages } from "../controllers/packageController.js";
 import { getEvent, getEvents } from "../controllers/eventController.js";
 import { getRegistration, postRegistration } from "../controllers/registrationController.js";
 import { postCreatePayment } from "../controllers/paymentController.js";
+import { getPublicGalleryImages } from "../controllers/galleryController.js";
 import { validate } from "../middleware/validate.js";
 import { paymentRateLimiter } from "../middleware/rateLimit.js";
 
@@ -12,6 +13,7 @@ export const publicRouter = Router();
 publicRouter.get("/packages", getPackages);
 publicRouter.get("/events", getEvents);
 publicRouter.get("/events/:id", getEvent);
+publicRouter.get("/gallery", getPublicGalleryImages);
 
 publicRouter.post(
   "/registrations",

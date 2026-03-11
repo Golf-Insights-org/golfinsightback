@@ -29,8 +29,12 @@ export function createApp() {
     webhookRouter,
   );
 
+  // Source - https://stackoverflow.com/a/72189302
+  // Posted by Jerud, modified by community. See post 'Timeline' for change history
+  // Retrieved 2026-03-11, License - CC BY-SA 4.0
   app.use(
     express.json({
+      limit: "50mb",
       verify: (req, res, buf) => {
         // keep for debugging/support, not for Stripe
         req.jsonBody = buf;

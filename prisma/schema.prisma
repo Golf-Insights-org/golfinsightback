@@ -33,6 +33,12 @@ enum PaymentStatus {
   FAILED
 }
 
+enum GalleryCategory {
+  SOCIAL
+  EXECUTIVE
+  ONE_ON_ONE
+}
+
 model Admin {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -112,4 +118,12 @@ model Payment {
   @@index([provider])
   @@index([status])
   @@index([providerRef])
+}
+
+model GalleryImage {
+  id        String          @id @default(cuid())
+  category  GalleryCategory
+  url       String
+  alt       String?
+  createdAt DateTime        @default(now())
 }

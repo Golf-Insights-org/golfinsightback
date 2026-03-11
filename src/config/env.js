@@ -23,6 +23,11 @@ export const env = {
 
   APP_BASE_URL: process.env.APP_BASE_URL || "http://localhost:5173",
 
+  CLOUDINARY_CLOUD_NAME: requireEnv("CLOUDINARY_CLOUD_NAME"),
+  CLOUDINARY_API_KEY: requireEnv("CLOUDINARY_API_KEY"),
+  CLOUDINARY_API_SECRET: requireEnv("CLOUDINARY_API_SECRET"),
+  CLOUDINARY_FOLDER: process.env.CLOUDINARY_FOLDER || "golfinsights/gallery",
+
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   EMAIL_FROM: process.env.EMAIL_FROM,
 };
