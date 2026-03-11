@@ -3,17 +3,31 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
+import { env } from "./config/env.js";
 import { apiRateLimiter } from "./middleware/rateLimit.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { publicRouter } from "./routes/publicRoutes.js";
 import { adminRouter } from "./routes/adminRoutes.js";
 import { webhookRouter } from "./routes/paymentWebhookRoutes.js";
 
+const allowedOrigins = new Set(env.CORS_ALLOWED_ORIGINS || []);
+
 export function createApp() {
   const app = express();
 
   app.use(helmet());
-  app.use(cors());
+  app.use(
+    cors({
+      origin: (origin, cb) => {
+        if (!origin || allowedOrigins.has(origin)) {
+          cb(null, true);
+        } else {
+          cb(null, false);
+        }
+      },
+      credentials: true,
+    }),
+  );
   app.use(morgan("combined"));
   app.use(apiRateLimiter);
 

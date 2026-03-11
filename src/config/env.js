@@ -21,7 +21,16 @@ export const env = {
   STRIPE_WEBHOOK_SECRET: requireEnv("STRIPE_WEBHOOK_SECRET"),
   FRONTEND_URL: requireEnv("FRONTEND_URL"),
 
-  APP_BASE_URL: process.env.APP_BASE_URL || "http://localhost:5173",
+  // Comma-separated list; if not set, falls back to FRONTEND_URL only
+  get CORS_ALLOWED_ORIGINS() {
+    const raw = process.env.CORS_ALLOWED_ORIGINS;
+    if (raw) {
+      return raw.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    return process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [];
+  },
+
+  APP_BASE_URL: process.env.APP_BASE_URL,
 
   CLOUDINARY_CLOUD_NAME: requireEnv("CLOUDINARY_CLOUD_NAME"),
   CLOUDINARY_API_KEY: requireEnv("CLOUDINARY_API_KEY"),
