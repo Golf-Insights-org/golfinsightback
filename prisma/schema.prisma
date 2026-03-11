@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PackageCategory {
+  SPONSORSHIP
+  SIGNAGE
+  GOLF
+  DINNER
+  DONATION
+}
+
+enum RegistrationStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id            String         @id @default(cuid())
+  name          String
+  date          DateTime
+  location      String
+  registrations Registration[]
+  createdAt     DateTime       @default(now())
+}
+
+model Package {
+  id            String          @id @default(cuid())
+  name          String          @unique
+  description   String
+  category      PackageCategory
+  price         Int
+  maxSlots      Int?
+  registrations Registration[]
+  createdAt     DateTime        @default(now())
+}
+
+model Registration {
+  id             String             @id @default(cuid())
+  eventId        String
+  packageId      String
+  name           String
+  email          String
+  phone          String
+  address        String
+  city           String
+  state          String
+  zip            String
+  donationAmount Int?
+  status         RegistrationStatus @default(PENDING)
+  golfers        Golfer[]
+  payments       Payment[]
+  createdAt      DateTime           @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  package Package @relation(fields: [packageId], references: [id], onDelete: Restrict)
+
+  @@index([eventId])
+  @@index([packageId])
+  @@index([status])
+  @@index([email])
+}
+
+model Golfer {
+  id             String       @id @default(cuid())
+  registrationId String
+  name           String
+  email          String?
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([registrationId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  registrationId String
+  amount         Int
+  provider       String
+  providerRef    String
+  status         PaymentStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([registrationId])
+  @@index([provider])
+  @@index([status])
+  @@index([providerRef])
+}
