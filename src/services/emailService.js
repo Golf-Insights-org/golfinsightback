@@ -70,3 +70,31 @@ export async function sendRegistrationConfirmationEmail({ registration, event })
     html,
   });
 }
+
+export async function sendDonationConfirmationEmail({ donation }) {
+  const baseUrl = getFrontendUrl();
+  const foundationUrl = `${baseUrl}/foundation`;
+  const amount = typeof donation.amount === "number" ? donation.amount : 0;
+  const amountFormatted = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+  }).format(amount / 100);
+
+  const subject = "Thank you for your donation";
+  const html = `
+    <p>Hi ${donation.name},</p>
+    <p>Thank you for your generous donation of <strong>${amountFormatted}</strong> to the Golf Insights Foundation.</p>
+    <p>Your support helps us expand programs, reach more communities, and create lasting impact.</p>
+    <p>
+      Learn more about the Foundation here:<br />
+      <a href="${foundationUrl}">${foundationUrl}</a>
+    </p>
+    <p>— Golf Insights Foundation</p>
+  `;
+
+  await sendResendEmail({
+    to: donation.email,
+    subject,
+    html,
+  });
+}

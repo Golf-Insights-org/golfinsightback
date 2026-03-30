@@ -33,6 +33,12 @@ enum PaymentStatus {
   FAILED
 }
 
+enum DonationStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
 enum GalleryCategory {
   SOCIAL
   EXECUTIVE
@@ -117,19 +123,37 @@ model Golfer {
 
 model Payment {
   id             String        @id @default(cuid())
-  registrationId String
+  registrationId String?
+  donationId     String?
   amount         Int
   provider       String
   providerRef    String
   status         PaymentStatus @default(PENDING)
   createdAt      DateTime      @default(now())
 
-  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  registration Registration? @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  donation     Donation?     @relation(fields: [donationId], references: [id], onDelete: Cascade)
 
   @@index([registrationId])
+  @@index([donationId])
   @@index([provider])
   @@index([status])
   @@index([providerRef])
+}
+
+model Donation {
+  id        String         @id @default(cuid())
+  name      String
+  email     String
+  amount    Int
+  status    DonationStatus @default(PENDING)
+  paidAt    DateTime?
+  payments  Payment[]
+  createdAt DateTime       @default(now())
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model GalleryImage {

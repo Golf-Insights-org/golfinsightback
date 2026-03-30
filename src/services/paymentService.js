@@ -1,7 +1,7 @@
 import { prisma } from "../prisma/client.js";
 import { stripe } from "../utils/stripe.js";
 import { env } from "../config/env.js";
-import { sendRegistrationConfirmationEmail } from "./emailService.js";
+import { sendDonationConfirmationEmail, sendRegistrationConfirmationEmail } from "./emailService.js";
 
 function computeAmountCents(registration) {
   const pkg = registration.package;
@@ -22,6 +22,67 @@ function computeAmountCents(registration) {
 function getFrontendBaseUrl() {
   const base = env.FRONTEND_URL || env.APP_BASE_URL;
   return base.replace(/\/$/, "");
+}
+
+export async function createDonationCheckoutSession({ donationId }) {
+  const donation = await prisma.donation.findUnique({
+    where: { id: donationId },
+  });
+  if (!donation) {
+    const err = new Error("Donation not found");
+    err.statusCode = 404;
+    throw err;
+  }
+  if (donation.status !== "PENDING") {
+    const err = new Error("Donation is not pending");
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const amount = donation.amount;
+  if (!amount || amount < 50) {
+    const err = new Error("Amount must be at least 50 cents");
+    err.statusCode = 422;
+    throw err;
+  }
+
+  const frontendBase = getFrontendBaseUrl();
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    success_url: `${frontendBase}/donation/success?donationId=${donation.id}`,
+    cancel_url: `${frontendBase}/donation/cancel?donationId=${donation.id}`,
+    customer_email: donation.email,
+    metadata: {
+      donationId: donation.id,
+      kind: "donation",
+    },
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: amount,
+          product_data: {
+            name: "General Donation",
+            description: "Support the Golf Insights Foundation.",
+          },
+        },
+      },
+    ],
+  });
+
+  await prisma.payment.create({
+    data: {
+      donationId: donation.id,
+      amount,
+      provider: "stripe",
+      providerRef: session.id,
+      status: "PENDING",
+    },
+  });
+
+  return { id: session.id, url: session.url };
 }
 
 export async function createCheckoutSession({ registrationId }) {
@@ -93,49 +154,86 @@ export async function handleStripeWebhook({ rawBody, signature }) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const registrationId = session.metadata?.registrationId;
-    if (!registrationId) return { received: true };
+    const donationId = session.metadata?.donationId;
+    if (!registrationId && !donationId) return { received: true };
 
     const paymentRef = session.id;
     const amountTotal = session.amount_total ?? undefined;
 
-    const registration = await prisma.$transaction(async (tx) => {
-      const payment = await tx.payment.findFirst({
-        where: { provider: "stripe", providerRef: paymentRef },
+    if (registrationId) {
+      const registration = await prisma.$transaction(async (tx) => {
+        const payment = await tx.payment.findFirst({
+          where: { provider: "stripe", providerRef: paymentRef },
+        });
+
+        if (payment) {
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: { status: "PAID", amount: amountTotal ?? payment.amount },
+          });
+        } else {
+          await tx.payment.create({
+            data: {
+              registrationId,
+              amount: amountTotal || 0,
+              provider: "stripe",
+              providerRef: paymentRef,
+              status: "PAID",
+            },
+          });
+        }
+
+        await tx.registration.update({
+          where: { id: registrationId },
+          data: { status: "PAID" },
+        });
+        return tx.registration.findUnique({
+          where: { id: registrationId },
+          include: { event: true },
+        });
       });
 
-      if (payment) {
-        await tx.payment.update({
-          where: { id: payment.id },
-          data: { status: "PAID", amount: amountTotal ?? payment.amount },
-        });
-      } else {
-        await tx.payment.create({
-          data: {
-            registrationId,
-            amount: amountTotal || 0,
-            provider: "stripe",
-            providerRef: paymentRef,
-            status: "PAID",
-          },
+      // Fire-and-forget email; errors are logged but don't break the webhook.
+      if (registration) {
+        await sendRegistrationConfirmationEmail({
+          registration,
+          event: registration.event,
         });
       }
+    } else if (donationId) {
+      const donation = await prisma.$transaction(async (tx) => {
+        const payment = await tx.payment.findFirst({
+          where: { provider: "stripe", providerRef: paymentRef },
+        });
 
-      await tx.registration.update({
-        where: { id: registrationId },
-        data: { status: "PAID" },
-      });
-      return tx.registration.findUnique({
-        where: { id: registrationId },
-        include: { event: true },
-      });
-    });
+        if (payment) {
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: { status: "PAID", amount: amountTotal ?? payment.amount },
+          });
+        } else {
+          await tx.payment.create({
+            data: {
+              donationId,
+              amount: amountTotal || 0,
+              provider: "stripe",
+              providerRef: paymentRef,
+              status: "PAID",
+            },
+          });
+        }
 
-    // Fire-and-forget email; errors are logged but don't break the webhook.
-    if (registration) {
-      await sendRegistrationConfirmationEmail({
-        registration,
-        event: registration.event,
+        await tx.donation.update({
+          where: { id: donationId },
+          data: { status: "PAID", paidAt: new Date() },
+        });
+
+        return tx.donation.findUnique({ where: { id: donationId } });
       });
+
+      if (donation) {
+        await sendDonationConfirmationEmail({ donation });
+      }
     }
   }
 

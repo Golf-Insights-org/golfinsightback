@@ -5,6 +5,7 @@ import { getPackages } from "../controllers/packageController.js";
 import { getEvent, getEvents } from "../controllers/eventController.js";
 import { getRegistration, postRegistration, postSponsorLogo } from "../controllers/registrationController.js";
 import { postCreatePayment } from "../controllers/paymentController.js";
+import { postCreateDonation } from "../controllers/donationController.js";
 import { getPublicGalleryImages } from "../controllers/galleryController.js";
 import { validate } from "../middleware/validate.js";
 import { paymentRateLimiter } from "../middleware/rateLimit.js";
@@ -54,5 +55,17 @@ publicRouter.post(
   [body("registrationId").isString().notEmpty()],
   validate,
   postCreatePayment,
+);
+
+publicRouter.post(
+  "/donations",
+  paymentRateLimiter,
+  [
+    body("name").isString().trim().notEmpty(),
+    body("email").isEmail().normalizeEmail(),
+    body("amount").isInt({ min: 50 }),
+  ],
+  validate,
+  postCreateDonation,
 );
 
