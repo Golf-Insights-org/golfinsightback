@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { body } from "express-validator";
 import {
+  getAdminDonations,
   getAdminGolfers,
   getAdminPayments,
   getAdminRegistrations,
@@ -41,6 +42,7 @@ adminRouter.post(
 
 adminRouter.get("/admin/registrations", requireAdmin, getAdminRegistrations);
 adminRouter.get("/admin/payments", requireAdmin, getAdminPayments);
+adminRouter.get("/admin/donations", requireAdmin, getAdminDonations);
 adminRouter.get("/admin/sponsors", requireAdmin, getAdminSponsors);
 adminRouter.get("/admin/golfers", requireAdmin, getAdminGolfers);
 

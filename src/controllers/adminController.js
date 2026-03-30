@@ -1,5 +1,12 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { adminLogin, listGolfers, listPayments, listRegistrations, listSponsors } from "../services/adminService.js";
+import {
+  adminLogin,
+  listDonations,
+  listGolfers,
+  listPayments,
+  listRegistrations,
+  listSponsors,
+} from "../services/adminService.js";
 
 export const postAdminLogin = asyncHandler(async (req, res) => {
   const result = await adminLogin({ email: req.body.email, password: req.body.password });
@@ -13,6 +20,11 @@ export const getAdminRegistrations = asyncHandler(async (req, res) => {
 
 export const getAdminPayments = asyncHandler(async (req, res) => {
   const result = await listPayments({ query: req.query });
+  res.json(result);
+});
+
+export const getAdminDonations = asyncHandler(async (req, res) => {
+  const result = await listDonations({ query: req.query });
   res.json(result);
 });
 

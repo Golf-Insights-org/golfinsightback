@@ -64,7 +64,10 @@ export async function listPayments({ query }) {
   const [items, total, totals] = await Promise.all([
     prisma.payment.findMany({
       where,
-      include: { registration: { include: { package: true, event: true } } },
+      include: {
+        registration: { include: { package: true, event: true } },
+        donation: true,
+      },
       orderBy: { createdAt: "desc" },
       skip,
       take,
@@ -78,6 +81,38 @@ export async function listPayments({ query }) {
   ]);
 
   return { items, page, pageSize, total, paidTotals: { amount: totals._sum.amount || 0, count: totals._count._all } };
+}
+
+export async function listDonations({ query }) {
+  const { skip, take, page, pageSize } = getPagination(query);
+  const status = query.status;
+
+  const where = {
+    ...(status ? { status } : {}),
+  };
+
+  const [items, total, totals] = await Promise.all([
+    prisma.donation.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.donation.count({ where }),
+    prisma.donation.aggregate({
+      where: { status: "PAID" },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+  ]);
+
+  return {
+    items,
+    page,
+    pageSize,
+    total,
+    paidTotals: { amount: totals._sum.amount || 0, count: totals._count._all },
+  };
 }
 
 export async function listSponsors() {
