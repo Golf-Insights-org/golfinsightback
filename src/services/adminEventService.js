@@ -25,13 +25,13 @@ export async function getAdminEvent(id) {
   return event;
 }
 
-export async function createEvent({ name, date, location }) {
+export async function createEvent({ name, description, date, location }) {
   return prisma.event.create({
-    data: { name, date: new Date(date), location },
+    data: { name, description: description ?? null, date: new Date(date), location },
   });
 }
 
-export async function updateEvent(id, { name, date, location }) {
+export async function updateEvent(id, { name, description, date, location }) {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) {
     const err = new Error("Event not found");
@@ -43,6 +43,7 @@ export async function updateEvent(id, { name, date, location }) {
     where: { id },
     data: {
       ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
       ...(date !== undefined && { date: new Date(date) }),
       ...(location !== undefined && { location }),
     },

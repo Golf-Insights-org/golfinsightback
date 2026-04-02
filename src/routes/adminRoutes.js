@@ -54,6 +54,7 @@ adminRouter.post(
   requireAdmin,
   [
     body("name").isString().trim().notEmpty(),
+    body("description").optional({ nullable: true }).isString(),
     body("date").isISO8601(),
     body("location").isString().trim().notEmpty(),
   ],
@@ -65,6 +66,7 @@ adminRouter.put(
   requireAdmin,
   [
     body("name").optional().isString().trim().notEmpty(),
+    body("description").optional({ nullable: true }).isString(),
     body("date").optional().isISO8601(),
     body("location").optional().isString().trim().notEmpty(),
   ],

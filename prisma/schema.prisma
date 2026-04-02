@@ -55,6 +55,7 @@ model Admin {
 model Event {
   id            String         @id @default(cuid())
   name          String
+  description   String?
   date          DateTime
   location      String
   packages      Package[]
