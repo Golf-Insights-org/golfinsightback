@@ -1,5 +1,15 @@
 import { prisma } from "../prisma/client.js";
 
+async function clearShowOnIndexExcept(exceptId) {
+  await prisma.event.updateMany({
+    where: {
+      showOnIndex: true,
+      ...(exceptId ? { id: { not: exceptId } } : {}),
+    },
+    data: { showOnIndex: false },
+  });
+}
+
 export async function listAdminEvents() {
   return prisma.event.findMany({
     include: {
@@ -25,19 +35,31 @@ export async function getAdminEvent(id) {
   return event;
 }
 
-export async function createEvent({ name, description, date, location }) {
+export async function createEvent({ name, description, date, location, coverImage, showOnIndex }) {
+  const featured = Boolean(showOnIndex);
+  if (featured) await clearShowOnIndexExcept(null);
+
   return prisma.event.create({
-    data: { name, description: description ?? null, date: new Date(date), location },
+    data: {
+      name,
+      description: description ?? null,
+      date: new Date(date),
+      location,
+      showOnIndex: featured,
+      ...(coverImage !== undefined && { coverImage: coverImage ?? null }),
+    },
   });
 }
 
-export async function updateEvent(id, { name, description, date, location }) {
+export async function updateEvent(id, { name, description, date, location, coverImage, showOnIndex }) {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) {
     const err = new Error("Event not found");
     err.statusCode = 404;
     throw err;
   }
+
+  if (showOnIndex === true) await clearShowOnIndexExcept(id);
 
   return prisma.event.update({
     where: { id },
@@ -46,7 +68,22 @@ export async function updateEvent(id, { name, description, date, location }) {
       ...(description !== undefined && { description }),
       ...(date !== undefined && { date: new Date(date) }),
       ...(location !== undefined && { location }),
+      ...(coverImage !== undefined && { coverImage: coverImage ?? null }),
+      ...(showOnIndex !== undefined && { showOnIndex: Boolean(showOnIndex) }),
     },
+  });
+}
+
+export async function updateEventCoverImage(id, coverImageUrl) {
+  const existing = await prisma.event.findUnique({ where: { id } });
+  if (!existing) {
+    const err = new Error("Event not found");
+    err.statusCode = 404;
+    throw err;
+  }
+  return prisma.event.update({
+    where: { id },
+    data: { coverImage: coverImageUrl },
   });
 }
 

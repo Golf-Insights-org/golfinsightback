@@ -15,12 +15,16 @@ async function main() {
     create: { email: adminEmail, password: adminHash },
   });
 
+  const eventDescription =
+    "This isn’t just a golf outing, it’s a movement. The 2026 Golf Insight Foundation Outing will set a new standard for what it means to play with purpose. With electrifying entertainment, vibrant culture, and a powerful mission at the core, this event fuses golf, community, and philanthropy like never before. Proceeds will help fund golf programming for underserved youth and individuals with disabilities.";
+
   const event = await prisma.event.upsert({
     where: { id: "default-event" },
-    update: {},
+    update: { description: eventDescription },
     create: {
       id: "default-event",
       name: "Golf Insights Foundation 2026 Golf Outing",
+      description: eventDescription,
       date: new Date("2026-10-01T12:00:00.000Z"),
       location: "Inwood Country Club",
     },

@@ -2,7 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { body } from "express-validator";
 import { getPackages } from "../controllers/packageController.js";
-import { getEvent, getEvents } from "../controllers/eventController.js";
+import { getEvent, getEvents, getIndexFeaturedEventPublic } from "../controllers/eventController.js";
 import { getRegistration, postRegistration, postSponsorLogo } from "../controllers/registrationController.js";
 import { postCreatePayment } from "../controllers/paymentController.js";
 import { postCreateDonation } from "../controllers/donationController.js";
@@ -23,6 +23,7 @@ const logoUpload = multer({
 
 publicRouter.get("/packages", getPackages);
 publicRouter.get("/events", getEvents);
+publicRouter.get("/events/index-featured", getIndexFeaturedEventPublic);
 publicRouter.get("/events/:id", getEvent);
 publicRouter.get("/gallery", getPublicGalleryImages);
 

@@ -15,6 +15,7 @@ import {
   postAdminEvent,
   putAdminEvent,
   deleteAdminEvent,
+  postAdminEventCoverImage,
 } from "../controllers/adminEventController.js";
 import {
   postAdminPackage,
@@ -57,6 +58,10 @@ adminRouter.post(
     body("description").optional({ nullable: true }).isString(),
     body("date").isISO8601(),
     body("location").isString().trim().notEmpty(),
+    body("coverImage")
+      .optional({ nullable: true })
+      .custom((v) => v === null || typeof v === "string"),
+    body("showOnIndex").optional().isBoolean(),
   ],
   validate,
   postAdminEvent,
@@ -69,9 +74,19 @@ adminRouter.put(
     body("description").optional({ nullable: true }).isString(),
     body("date").optional().isISO8601(),
     body("location").optional().isString().trim().notEmpty(),
+    body("coverImage")
+      .optional({ nullable: true })
+      .custom((v) => v === null || typeof v === "string"),
+    body("showOnIndex").optional().isBoolean(),
   ],
   validate,
   putAdminEvent,
+);
+adminRouter.post(
+  "/admin/events/:id/cover-image",
+  requireAdmin,
+  upload.single("file"),
+  postAdminEventCoverImage,
 );
 adminRouter.delete("/admin/events/:id", requireAdmin, deleteAdminEvent);
 

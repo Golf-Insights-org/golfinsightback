@@ -6,6 +6,14 @@ export async function listEvents() {
   });
 }
 
+/** Public home page: single featured event (admin toggles showOnIndex). */
+export async function getIndexFeaturedEvent() {
+  return prisma.event.findFirst({
+    where: { showOnIndex: true },
+    orderBy: { date: "asc" },
+  });
+}
+
 export async function getEventWithPackagesById(id) {
   const event = await prisma.event.findUnique({
     where: { id },
