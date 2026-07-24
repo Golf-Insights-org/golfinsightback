@@ -2,6 +2,7 @@ import { prisma } from "../prisma/client.js";
 import { stripe } from "../utils/stripe.js";
 import { env } from "../config/env.js";
 import { sendDonationConfirmationEmail, sendRegistrationConfirmationEmail } from "./emailService.js";
+import { assertPackagePurchaseAvailable } from "./packageInventoryService.js";
 
 function computeAmountCents(registration) {
   const pkg = registration.package;
@@ -100,6 +101,12 @@ export async function createCheckoutSession({ registrationId }) {
     err.statusCode = 409;
     throw err;
   }
+
+  await prisma.$transaction(async (tx) => {
+    await assertPackagePurchaseAvailable(tx, registration.packageId, {
+      excludeRegistrationId: registration.id,
+    });
+  });
 
   const amount = computeAmountCents(registration);
   if (!amount || amount < 50) {
@@ -240,12 +247,22 @@ export async function handleStripeWebhook({ rawBody, signature }) {
   if (event.type === "checkout.session.expired") {
     const session = event.data.object;
     const paymentRef = session.id;
-    await prisma.payment.updateMany({
-      where: { provider: "stripe", providerRef: paymentRef, status: "PENDING" },
-      data: { status: "FAILED" },
+    const registrationId = session.metadata?.registrationId;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.updateMany({
+        where: { provider: "stripe", providerRef: paymentRef, status: "PENDING" },
+        data: { status: "FAILED" },
+      });
+
+      if (registrationId) {
+        await tx.registration.updateMany({
+          where: { id: registrationId, status: "PENDING" },
+          data: { status: "CANCELLED" },
+        });
+      }
     });
   }
 
   return { received: true };
 }
-

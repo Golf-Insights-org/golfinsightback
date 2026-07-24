@@ -1,4 +1,5 @@
 import { prisma } from "../prisma/client.js";
+import { enrichPackageWithInventory } from "./packageInventoryService.js";
 
 export async function listEvents() {
   return prisma.event.findMany({
@@ -30,6 +31,22 @@ export async function getEventWithPackagesById(id) {
     throw err;
   }
 
-  return event;
-}
+  const heldCounts = await prisma.registration.groupBy({
+    by: ["packageId"],
+    where: {
+      eventId: id,
+      status: { in: ["PENDING", "PAID"] },
+    },
+    _count: { _all: true },
+  });
 
+  const countByPackageId = Object.fromEntries(
+    heldCounts.map((row) => [row.packageId, row._count._all]),
+  );
+
+  const packages = event.packages.map((pkg) =>
+    enrichPackageWithInventory(pkg, countByPackageId[pkg.id] ?? 0),
+  );
+
+  return { ...event, packages };
+}

@@ -11,6 +11,8 @@ export function errorHandler(err, req, res, next) {
     // eslint-disable-next-line no-console
     console.error(err);
   }
-  res.status(status).json({ error: message });
+  const payload = { error: message };
+  if (err.code) payload.code = err.code;
+  res.status(status).json(payload);
 }
 

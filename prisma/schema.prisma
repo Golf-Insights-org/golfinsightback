@@ -76,6 +76,7 @@ model Package {
   earlyBirdDeadline DateTime?
   maxSlots          Int?
   exclusive         Boolean         @default(false)
+  exclusiveLimit    Int?
   registrations     Registration[]
   createdAt         DateTime        @default(now())
 
