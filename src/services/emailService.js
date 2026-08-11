@@ -1,9 +1,18 @@
 import { Resend } from "resend";
 import { env } from "../config/env.js";
+import { listNotificationRecipients } from "./notificationRecipientService.js";
 
 function getFrontendUrl() {
   const base = env.FRONTEND_URL || env.APP_BASE_URL;
   return base.replace(/\/$/, "");
+}
+
+function formatCents(cents) {
+  const amount = typeof cents === "number" ? cents : 0;
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+  }).format(amount / 100);
 }
 
 const resendClient =
@@ -74,11 +83,7 @@ export async function sendRegistrationConfirmationEmail({ registration, event })
 export async function sendDonationConfirmationEmail({ donation }) {
   const baseUrl = getFrontendUrl();
   const foundationUrl = `${baseUrl}/foundation`;
-  const amount = typeof donation.amount === "number" ? donation.amount : 0;
-  const amountFormatted = new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-  }).format(amount / 100);
+  const amountFormatted = formatCents(donation.amount);
 
   const subject = "Thank you for your donation";
   const html = `
@@ -97,4 +102,90 @@ export async function sendDonationConfirmationEmail({ donation }) {
     subject,
     html,
   });
+}
+
+export async function sendAdminRegistrationPaidEmail({
+  to,
+  registration,
+  event,
+  package: pkg,
+  amountCents,
+}) {
+  const paidAt = new Date().toLocaleString();
+  const subject = `New paid registration: ${registration.name}`;
+  const html = `
+    <p>A registration payment just completed.</p>
+    <p>
+      <strong>Payer:</strong> ${registration.name}<br />
+      <strong>Email:</strong> ${registration.email}<br />
+      <strong>Phone:</strong> ${registration.phone || "—"}
+    </p>
+    <p>
+      <strong>Event:</strong> ${event?.name || "—"}<br />
+      <strong>Package:</strong> ${pkg?.name || "—"} (${pkg?.category || "—"})<br />
+      <strong>Amount paid:</strong> ${formatCents(amountCents)}<br />
+      <strong>Paid at:</strong> ${paidAt}<br />
+      <strong>Registration ID:</strong> ${registration.id}
+    </p>
+    <p>— Golf Insights Admin Notifications</p>
+  `;
+
+  await sendResendEmail({ to, subject, html });
+}
+
+export async function sendAdminDonationPaidEmail({ to, donation }) {
+  const paidAt = donation.paidAt
+    ? new Date(donation.paidAt).toLocaleString()
+    : new Date().toLocaleString();
+  const subject = `New donation: ${donation.name}`;
+  const html = `
+    <p>A donation payment just completed.</p>
+    <p>
+      <strong>Donor:</strong> ${donation.name}<br />
+      <strong>Email:</strong> ${donation.email}<br />
+      <strong>Amount paid:</strong> ${formatCents(donation.amount)}<br />
+      <strong>Paid at:</strong> ${paidAt}<br />
+      <strong>Donation ID:</strong> ${donation.id}
+    </p>
+    <p>— Golf Insights Admin Notifications</p>
+  `;
+
+  await sendResendEmail({ to, subject, html });
+}
+
+export async function notifyAdminsOfPaidRegistration({
+  registration,
+  event,
+  package: pkg,
+  amountCents,
+}) {
+  try {
+    const recipients = await listNotificationRecipients();
+    await Promise.all(
+      recipients.map((r) =>
+        sendAdminRegistrationPaidEmail({
+          to: r.email,
+          registration,
+          event,
+          package: pkg,
+          amountCents,
+        }),
+      ),
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("Admin registration notify failed", err);
+  }
+}
+
+export async function notifyAdminsOfPaidDonation({ donation }) {
+  try {
+    const recipients = await listNotificationRecipients();
+    await Promise.all(
+      recipients.map((r) => sendAdminDonationPaidEmail({ to: r.email, donation })),
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("Admin donation notify failed", err);
+  }
 }

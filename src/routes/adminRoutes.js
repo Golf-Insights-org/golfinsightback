@@ -29,6 +29,11 @@ import {
   adminUploadGalleryImages,
   adminDeleteGalleryImage,
 } from "../controllers/galleryController.js";
+import {
+  getAdminNotificationRecipients,
+  postAdminNotificationRecipient,
+  deleteAdminNotificationRecipient,
+} from "../controllers/notificationRecipientController.js";
 
 export const adminRouter = Router();
 
@@ -131,4 +136,19 @@ adminRouter.delete("/admin/packages/:id", requireAdmin, deleteAdminPackage);
 adminRouter.post("/admin/gallery", requireAdmin, upload.array("files", 50), adminUploadGalleryImages);
 adminRouter.get("/admin/gallery", requireAdmin, adminListGalleryImages);
 adminRouter.delete("/admin/gallery/:id", requireAdmin, adminDeleteGalleryImage);
+
+// Notification recipients (admin payment alerts)
+adminRouter.get("/admin/notification-recipients", requireAdmin, getAdminNotificationRecipients);
+adminRouter.post(
+  "/admin/notification-recipients",
+  requireAdmin,
+  [body("email").isEmail().normalizeEmail()],
+  validate,
+  postAdminNotificationRecipient,
+);
+adminRouter.delete(
+  "/admin/notification-recipients/:id",
+  requireAdmin,
+  deleteAdminNotificationRecipient,
+);
 

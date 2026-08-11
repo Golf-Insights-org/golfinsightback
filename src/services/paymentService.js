@@ -1,7 +1,12 @@
 import { prisma } from "../prisma/client.js";
 import { stripe } from "../utils/stripe.js";
 import { env } from "../config/env.js";
-import { sendDonationConfirmationEmail, sendRegistrationConfirmationEmail } from "./emailService.js";
+import {
+  sendDonationConfirmationEmail,
+  sendRegistrationConfirmationEmail,
+  notifyAdminsOfPaidRegistration,
+  notifyAdminsOfPaidDonation,
+} from "./emailService.js";
 import { assertPackagePurchaseAvailable } from "./packageInventoryService.js";
 
 function computeAmountCents(registration) {
@@ -196,15 +201,22 @@ export async function handleStripeWebhook({ rawBody, signature }) {
         });
         return tx.registration.findUnique({
           where: { id: registrationId },
-          include: { event: true },
+          include: { event: true, package: true },
         });
       });
 
       // Fire-and-forget email; errors are logged but don't break the webhook.
       if (registration) {
+        const amountCents = amountTotal ?? registration.package?.price ?? 0;
         await sendRegistrationConfirmationEmail({
           registration,
           event: registration.event,
+        });
+        await notifyAdminsOfPaidRegistration({
+          registration,
+          event: registration.event,
+          package: registration.package,
+          amountCents,
         });
       }
     } else if (donationId) {
@@ -240,6 +252,7 @@ export async function handleStripeWebhook({ rawBody, signature }) {
 
       if (donation) {
         await sendDonationConfirmationEmail({ donation });
+        await notifyAdminsOfPaidDonation({ donation });
       }
     }
   }
